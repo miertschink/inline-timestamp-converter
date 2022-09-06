@@ -11,7 +11,27 @@
     "activeTab",
     "scripting"
   ],
-  "host_permissions": ["https://*/*"],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.binance.com/*"
+      ],
+      "js": [
+        "buynft.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://*.eventim.de/*"
+      ],
+      "js": [
+        "buyTicket.js"
+      ]
+    }
+  ],
+  "host_permissions": [
+    "https://*/*"
+  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

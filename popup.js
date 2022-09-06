@@ -15,10 +15,15 @@ changeColor.addEventListener("click", async () => {
     });
 })
 
-// The body of this function will be executed as a content script inside the
-// current page
 var transFormTimestamps = function () {
-    var getFormattedDate = function (date) {
+    var getFormattedDate = function (timestamp) {
+        let intTimestamp = parseInt(timestamp);
+        // in case of Unix Timestamp in seconds instead of milliseconds
+        if (intTimestamp <= 9999999999) {
+            console.warn(intTimestamp);
+            intTimestamp = intTimestamp * 1000;
+        }
+        const date = new Date(intTimestamp);
         return date.toLocaleString('de-DE', {
             hour: '2-digit',
             minute: '2-digit',
@@ -36,10 +41,17 @@ var transFormTimestamps = function () {
         '    display: inline-block;\n' +
         '    border-bottom: 1px dotted black; /* If you want dots under the hoverable text */\n' +
         '}\n' +
+        '.tooltiptext {\n' +
+        '    font-size: 12px;\n' +
+        '    position: absolute;\n' +
+        '    left: 0;\n' +
+        '    top: 0;\n' +
+        '}\n' +
         '\n' +
         '/* Tooltip text */\n' +
         '.tooltip .tooltiptext {\n' +
-        '    visibility: hidden;\n' +
+        '    opacity: 100;\n' +
+        '    visibility: visible;\n' +
         '    width: 120px;\n' +
         '    background-color: #555;\n' +
         '    color: #fff;\n' +
@@ -55,7 +67,6 @@ var transFormTimestamps = function () {
         '    margin-left: -60px;\n' +
         '\n' +
         '    /* Fade in tooltip */\n' +
-        '    opacity: 0;\n' +
         '    transition: opacity 0.3s;\n' +
         '}\n' +
         '\n' +
@@ -85,28 +96,28 @@ var transFormTimestamps = function () {
         document.body.style.backgroundColor = color;
     });
 
-    const htmlTagsToSearch = [
-        'h1', 'h2', 'h3', 'h4', 'p', 'div', 'span', 'td', 'th'
-    ];
+    const regex = new RegExp('\\d{10,13}')
 
-    for (var counter = 0; counter < htmlTagsToSearch.length; counter++) {
-        var tags = document.getElementsByTagName(htmlTagsToSearch[counter]);
-        const regex = new RegExp('\\d{13}')
-        for (var i = 0; i < tags.length; i++) {
-            const tagContent = tags[i].innerHTML;
-            const tagText = tags[i].textContent;
-            console.error(tagText);
-            console.error(tagText);
-            console.error(tagText);
+    function textNodesUnder(el) {
+        var n, a = [], walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, null, false);
+        while (n = walk.nextNode()) a.push(n);
+        return a;
+    }
+
+    const allElementWithKeyword = textNodesUnder(document).filter(
+        x => x.textContent.match(regex)).map(x => x.parentNode);
+
+    const elementStore = [];
+    for (var i = 0; i < allElementWithKeyword.length; i++) {
+        const currentElement = allElementWithKeyword[i];
+        console.warn(elementStore.indexOf(currentElement));
+        if (elementStore.indexOf(currentElement) === -1) {
+            const tagContent = currentElement.innerHTML;
+            const tagText = currentElement.textContent;
             const timeStampMatch = tagText.match(regex);
-            if (timeStampMatch !== null) {
-                const date = new Date(parseInt(timeStampMatch[0]));
-                const toolTipHover = '<div class="tooltip">' + tagContent +
-                    '  <span class="tooltiptext">' + getFormattedDate(date) + '</span>\n' +
-                    '</div>'
-                tags[i].innerHTML = toolTipHover;
-                break;
-            }
+            const innerHtml = currentElement.innerHTML.replace(regex, getFormattedDate(timeStampMatch[0]) + ' (' + timeStampMatch[0] + ')');
+            currentElement.innerHTML = innerHtml;
+            elementStore.push(currentElement);
         }
     }
 }
